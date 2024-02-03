@@ -1,5 +1,5 @@
 [package]
-name = "file-stream-exercise"
+name = "fs_objstore"
 version = "0.1.0"
 edition = "2021"
 
