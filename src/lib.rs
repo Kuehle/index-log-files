@@ -2,8 +2,59 @@ use nanoid::nanoid;
 use std::{
     collections::HashMap,
     fs::{File, OpenOptions},
-    io::{BufReader, BufWriter, Read, Seek, SeekFrom, Write},
+    io::{BufRead, BufReader, BufWriter, Read, Seek, SeekFrom, Write},
 };
+
+mod file;
+
+// This is the Unix philosophy: Write programs that do one thing and do it well. Write programs to work together. Write programs to handle text streams, because that is a universal interface.
+
+// Magic numbers at the beginning. Pretty much required in *nix:
+// File version number for backwards compatibility.
+// Endianness specification.
+// Block structure?
+// Checksums?
+// Version of your software that wrote the file
+// Make clear that it is a binary format - 0-255 allowed except for magic numbers
+// Allow markers to skip things (forward compatibility)
+//   so your current software can skip them
+//
+// Check out msgpack - interesting but not really helpful
+//
+// Random or sequential access?
+// Read vs Write - how often?
+// Write in one go or as data comes in?
+//
+// Reserve some space for future developments?
+
+// would be cool to have file IDs at well defined intervals (ie 64kB blocks)
+
+// consume magic byte
+
+// spend some time designing the file format and the priorities
+//
+//
+//
+// Easy to append
+// Easy to parse
+// Low overhead
+// Stream directly from file into other stream
+// Log - but able to quickly extract one entry from it
+//
+// not making progress because it is to generic
+//   do one thing, and do it well?
+//
+// log with keyd messages
+// timestamp allows to do a binary search and truncate based on persistence duration
+// 0xMagic_Begin[key] [timestamp]0xMagic_End
+//
+// create stream.log.index file with keys
+//   do I need keys in the file?
+//   is magic enough?
+//   do I want to align to full multiples of n-bytes or something?
+//
+//
+// allow segmentation into multiple files by default?
 
 pub type Key = String;
 pub type Offset = u64;
@@ -21,11 +72,11 @@ pub struct Storage {
 }
 
 // TODO allow to insert and retrieve through streams
-// TODO https://rust-lang-nursery.github.io/rust-cookbook/file/read-write.html#access-a-file-randomly-using-a-memory-map
 pub fn init(path: &str) -> Storage {
     let index: Index = HashMap::new();
     // TODO should first build the index
     //      or read it from the file if possible
+
     let file = OpenOptions::new()
         .append(true)
         .write(true)
@@ -67,6 +118,7 @@ impl Storage {
             .insert(key.clone(), (self.last_write, content.len() as u64));
 
         // TODO update index
+        // TODO write into log - help build index from log
         self.last_write = self.buf_writer.seek(SeekFrom::Current(0))?;
         Ok(key)
     }
@@ -88,5 +140,10 @@ impl Storage {
 
         // index starts right before key
         Ok(content)
+    }
+
+    pub fn build_index(&mut self) {
+        file::bar();
+        // read with nom
     }
 }

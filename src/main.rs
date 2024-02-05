@@ -28,5 +28,7 @@ fn main() -> Result<(), std::io::Error> {
         println!("{k}: {}", String::from_utf8(c).unwrap());
     }
 
+    storage.build_index();
+
     Ok(())
 }
