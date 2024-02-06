@@ -5,33 +5,15 @@ use nom::{
 };
 use nom_locate;
 use nom_locate::{position, LocatedSpan};
-
 use std::{collections::HashMap, fs};
 
-#[derive(Debug)]
-pub struct Msg {
-    payload: Vec<u8>,
-}
-
 type Span<'a> = LocatedSpan<&'a [u8]>;
-
-#[derive(Debug)]
-struct Log {
-    key: String,
-    blob: Vec<u8>,
-}
 
 #[derive(Debug)]
 struct Key {
     key: String,
     pos: u64,
     len: u64,
-}
-
-#[derive(Debug)]
-struct File {
-    header: String, // just a single line, separated by semicolon
-    logs: Vec<Log>,
 }
 
 fn nl(s: Span) -> IResult<Span, Span> {
@@ -70,17 +52,6 @@ fn logs_no_contents(s: Span) -> IResult<Span, Vec<Key>> {
     many0(log_no_contents)(s)
 }
 
-fn log(s: Span) -> IResult<Span, Log> {
-    let (s, key) = key(s)?;
-    let (s, blob) = blob(s)?;
-
-    Ok((s, Log { key, blob }))
-}
-
-fn logs(s: Span) -> IResult<Span, Vec<Log>> {
-    many0(log)(s)
-}
-
 fn header(s: Span) -> IResult<Span, String> {
     let (s, _) = tag([0xf0, 0x9f, 0xaa, 0xb5])(s)?;
     let (s, val) = nl(s)?;
@@ -89,14 +60,6 @@ fn header(s: Span) -> IResult<Span, String> {
     Ok((s, String::from_utf8_lossy(val.fragment()).to_string()))
 }
 
-fn file(s: Span) -> IResult<Span, File> {
-    let (s, header) = header(s)?;
-    let (s, logs) = logs(s)?;
-
-    Ok((s, File { header, logs }))
-}
-
-// Swallow error to not mess up lifetimes
 fn file_no_contents(s: Span) -> Option<Vec<Key>> {
     if let Ok((s, _)) = header(s) {
         if let Ok((_, logs)) = logs_no_contents(s) {
@@ -106,7 +69,6 @@ fn file_no_contents(s: Span) -> Option<Vec<Key>> {
     None
 }
 
-// Hydrate the index
 pub fn parse_log(file_name: &str) -> HashMap<String, (u64, u64)> {
     let mut result = HashMap::new();
 
@@ -119,29 +81,4 @@ pub fn parse_log(file_name: &str) -> HashMap<String, (u64, u64)> {
     }
 
     result
-}
-
-// TODO add parser that skips blobs
-// TODO add timestamps?
-
-// TODO create test
-pub fn bar() {
-    // let input = vec![0x90, 0xFF, 0x90, 0xFF, 0x00, 0xFF, 0x90];
-    let input = r#"🪵File Header!
-🔑asdfasdf
-Hello World
-
-🔑qwerqwer
-12345678
-9
-
-🔑ABCDABCD
-This is a test
-of a 
-multi line
-blob
-
-"#;
-    println!("{:?}", file_no_contents(Span::new(input.as_bytes())));
-    println!("slice: {}", &input[81..(81 + 36)]);
 }
