@@ -1,37 +1,23 @@
+use std::io::{Read, Write};
+
 use clap::{arg, Parser, Subcommand};
 use fs_objstore;
 
-// TODO add bin that is just the api wrapped in a cli?
-// TODO move stuff to examples
+// TODO ordered keys
+// TODO getNext by key
+// TODO write readme
 // TODO add tests
-// TODO build coordinator / load balancer on top
 // TODO benchmark
+// TODO streaming so not entire file needs to be read
 // TODO refactor the code a bit
 // TODO release? / use in other project
-// TODO build a simple msg queue
-// TODO build a blog
-// TODO write readme
 // TODO write defragmentation / cleaning
 // TODO delete entry (overwrite key & overwrite content with 0x90)
-
-fn example() -> Result<(), std::io::Error> {
-    let mut storage = fs_objstore::init("stream.db");
-
-    let messages = vec!["Hello World", "This is awesome", "What\ncan we do now?"];
-
-    let mut keys = vec![];
-    for m in messages.iter() {
-        let k = storage.persist(None, m.as_bytes()).unwrap();
-        keys.push(k);
-    }
-
-    for key in storage.keys().iter() {
-        let el = storage.retreive(key).unwrap();
-        println!("[INFO] Element: {}", String::from_utf8_lossy(&el));
-    }
-
-    Ok(())
-}
+// TODO use different parsing mode for cli with faster upstart time
+// TODO build server version
+// TODO build coordinator / load balancer on top
+// TODO build a simple msg queue
+// TODO build a blog
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -46,9 +32,14 @@ struct Args {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-    Insert {
+    Persist {
+        /// Payload to persist - reads from stdin otherwise
         #[arg(index = 1)]
-        content: String,
+        content: Option<String>,
+
+        /// Key for future retrieval - creates one at random otherwise
+        #[arg(long, short)]
+        key: Option<String>,
     },
     Retrieve {
         #[arg(index = 1)]
@@ -56,22 +47,36 @@ enum Commands {
     },
 }
 
-// TODO use different parsing mode for cli with faster upstart time
-// TODO build server version
 fn main() -> Result<(), std::io::Error> {
     let args = Args::parse();
 
     println!("{args:?}");
 
     match args.command {
-        Some(Commands::Retrieve { key }) => {
-            println!("CMD: ret {key:?}");
-        }
-        Some(Commands::Insert { content }) => {
-            println!("CMD: content {content:?}");
+        Some(cmd) => {
+            let mut storage = fs_objstore::init(&args.file);
+            println!("{:?}", storage.index);
+            match cmd {
+                Commands::Persist {
+                    content: Some(c),
+                    key,
+                } => {
+                    let key = storage.persist(key, &c.as_bytes())?;
+                    std::io::stdout().write_fmt(format_args!("{key}"))?;
+                }
+                Commands::Persist { content: None, key } => {
+                    let mut content = String::new();
+                    std::io::stdin().read_to_string(&mut content)?;
+                    let key = storage.persist(key, &content.as_bytes())?;
+                    std::io::stdout().write_fmt(format_args!("{key}"))?;
+                }
+                Commands::Retrieve { key } => {
+                    std::io::stdout().write_all(&storage.retreive(&key)?)?;
+                }
+            }
         }
         None => {
-            println!("CMD: none :(");
+            println!("Needs a command, try --help"); // TODO use Clap
         }
     }
 

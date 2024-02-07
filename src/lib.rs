@@ -22,13 +22,14 @@ pub struct Storage {
 }
 
 fn create_new_log_file(path: &str) -> File {
+    const VERSION: &str = env!("CARGO_PKG_VERSION");
     let mut f = OpenOptions::new()
         .write(true)
         .read(true)
         .create(true)
         .open(path)
         .unwrap();
-    f.write_all("🪵 Awesome Log File V0.0.1;\n".as_bytes())
+    f.write_all(format!("🪵 Awesome Log File V{VERSION};\n").as_bytes())
         .unwrap();
     f
 }
@@ -51,6 +52,7 @@ pub fn init(path: &str) -> Storage {
 }
 
 impl Storage {
+    // Not ordered
     pub fn keys(&self) -> Vec<String> {
         self.index.keys().map(|s| s.to_string()).collect()
     }
@@ -70,7 +72,7 @@ impl Storage {
         let start = self.buf_writer.seek(SeekFrom::End(0))?;
 
         self.buf_writer.write_all(content)?;
-        write!(self.buf_writer, "\n\n")?;
+        write!(self.buf_writer, "\n␜\n")?;
         self.buf_writer.flush()?;
 
         self.index
@@ -80,6 +82,7 @@ impl Storage {
     }
 
     pub fn retreive(&mut self, key: &str) -> Result<Vec<u8>, std::io::Error> {
+        // TODO handle key not found - Option<Vec<u8>>
         let (start, length) = self.index.get(key).unwrap();
         let l = *length as usize;
         self.buf_reader.seek(SeekFrom::Start(*start))?;

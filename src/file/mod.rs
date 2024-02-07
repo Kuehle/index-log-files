@@ -29,8 +29,8 @@ fn key(s: Span) -> IResult<Span, String> {
 }
 
 fn blob(s: Span) -> IResult<Span, Vec<u8>> {
-    let (s, blob) = take_until("\n\n")(s)?;
-    let (s, _) = tag("\n\n")(s)?;
+    let (s, blob) = take_until("\n␜\n")(s)?;
+    let (s, _) = tag("\n␜\n")(s)?;
     Ok((s, blob.to_vec()))
 }
 
@@ -41,7 +41,7 @@ fn log_no_contents(s: Span) -> IResult<Span, Key> {
     let (s, pos_after) = position(s)?;
 
     let pos: u64 = pos.location_offset().try_into().unwrap();
-    let len: u64 = (pos_after.location_offset() as u64 - pos - 2)
+    let len: u64 = (pos_after.location_offset() as u64 - pos - 6)
         .try_into()
         .unwrap();
 
