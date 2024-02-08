@@ -3,8 +3,7 @@ use std::io::{Read, Write};
 use clap::{arg, Parser, Subcommand};
 use fs_objstore;
 
-// TODO ordered keys
-// TODO getNext by key
+// TODO getNext by key - (lazy) iterator (streams)
 // TODO write readme
 // TODO add tests
 // TODO benchmark
@@ -55,7 +54,6 @@ fn main() -> Result<(), std::io::Error> {
     match args.command {
         Some(cmd) => {
             let mut storage = fs_objstore::init(&args.file);
-            println!("{:?}", storage.index);
             match cmd {
                 Commands::Persist {
                     content: Some(c),
@@ -71,7 +69,9 @@ fn main() -> Result<(), std::io::Error> {
                     std::io::stdout().write_fmt(format_args!("{key}"))?;
                 }
                 Commands::Retrieve { key } => {
-                    std::io::stdout().write_all(&storage.retreive(&key)?)?;
+                    std::io::stdout().write_all(&storage.retrieve(&key).unwrap())?;
+                    // Should crash
+                    // so it does not write to STDOUT but STDERR instead for better piping
                 }
             }
         }

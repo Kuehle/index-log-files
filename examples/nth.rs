@@ -20,5 +20,11 @@ fn main() -> Result<(), std::io::Error> {
         println!("[INFO] Element: \n{}", String::from_utf8_lossy(&el));
     }
 
+    if let Some((_, el)) = storage.retrieve_nth(2) {
+        println!("[INFO] Third Element: \n{}", String::from_utf8_lossy(&el));
+    } else {
+        println!("[INFO] Couln't find third element");
+    }
+
     Ok(())
 }

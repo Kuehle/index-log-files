@@ -1,3 +1,4 @@
+use file::Key;
 use nanoid::nanoid;
 use std::{
     collections::HashMap,
@@ -8,15 +9,15 @@ use std::{
 
 mod file;
 
-pub type Key = String;
 pub type Offset = u64;
 pub type Size = u64;
 pub type Position = (Offset, Size);
-pub type Index = HashMap<Key, Position>;
+pub type Index = HashMap<String, Position>;
 
 #[derive(Debug)]
 pub struct Storage {
-    pub index: Index,
+    index: Index,
+    keys: Vec<Key>,
     buf_writer: BufWriter<File>,
     buf_reader: BufReader<File>,
 }
@@ -35,7 +36,12 @@ fn create_new_log_file(path: &str) -> File {
 }
 
 pub fn init(path: &str) -> Storage {
-    let index = file::parse_log(path);
+    let keys = file::parse_log(path);
+
+    let mut index = HashMap::new();
+    for key in keys.iter() {
+        index.insert(key.key.clone(), (key.pos, key.len));
+    }
     let file = OpenOptions::new()
         .write(true)
         .read(true)
@@ -46,15 +52,16 @@ pub fn init(path: &str) -> Storage {
 
     Storage {
         index,
+        keys,
         buf_reader,
         buf_writer,
     }
 }
 
 impl Storage {
-    // Not ordered
-    pub fn keys(&self) -> Vec<String> {
-        self.index.keys().map(|s| s.to_string()).collect()
+    pub fn ordered_keys(&self) -> Vec<Key> {
+        // Maybe not clone but Rc?
+        self.keys.clone()
     }
 
     pub fn persist(
@@ -69,30 +76,52 @@ impl Storage {
         self.buf_writer.write_all(key.as_bytes())?;
         self.buf_writer.write_all("\n".as_bytes())?;
 
-        let start = self.buf_writer.seek(SeekFrom::End(0))?;
+        let pos = self.buf_writer.seek(SeekFrom::End(0))?;
+        let len = content.len() as u64;
 
         self.buf_writer.write_all(content)?;
         write!(self.buf_writer, "\n␜\n")?;
         self.buf_writer.flush()?;
 
-        self.index
-            .insert(key.clone(), (start, content.len() as u64));
+        // TODO a lot of clones
+        self.keys.push(Key {
+            key: key.clone(),
+            len,
+            pos,
+        });
+        self.index.insert(key.clone(), (pos, len));
 
         Ok(key)
     }
 
-    pub fn retreive(&mut self, key: &str) -> Result<Vec<u8>, std::io::Error> {
-        // TODO handle key not found - Option<Vec<u8>>
-        let (start, length) = self.index.get(key).unwrap();
-        let l = *length as usize;
-        self.buf_reader.seek(SeekFrom::Start(*start))?;
+    fn retrieve_by_pos_and_len(&mut self, pos: u64, len: u64) -> Option<Vec<u8>> {
+        let l = len as usize;
+        if let Ok(_) = self.buf_reader.seek(SeekFrom::Start(pos)) {
+            let content = (&mut self.buf_reader)
+                .bytes()
+                .take(l)
+                .map(|b| b.unwrap())
+                .collect();
+            Some(content)
+        } else {
+            None
+        }
+    }
 
-        let content = (&mut self.buf_reader)
-            .bytes()
-            .take(l)
-            .map(|b| b.unwrap())
-            .collect();
+    /// Retrieve the latest element with key
+    pub fn retrieve(&mut self, key: &str) -> Option<Vec<u8>> {
+        let (pos, len) = self.index.get(key).unwrap();
+        self.retrieve_by_pos_and_len(*pos, *len)
+    }
 
-        Ok(content)
+    /// Returns the nth element in the log, not considering overwritten fields
+    /// Starts at 0
+    pub fn retrieve_nth(&mut self, i: usize) -> Option<(String, Vec<u8>)> {
+        if let Some(Key { key, pos, len }) = self.ordered_keys().get(i) {
+            if let Some(content) = self.retrieve_by_pos_and_len(*pos, *len) {
+                return Some((key.clone(), content));
+            }
+        }
+        None
     }
 }

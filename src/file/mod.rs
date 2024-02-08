@@ -5,15 +5,15 @@ use nom::{
 };
 use nom_locate;
 use nom_locate::{position, LocatedSpan};
-use std::{collections::HashMap, fs};
+use std::fs;
 
 type Span<'a> = LocatedSpan<&'a [u8]>;
 
-#[derive(Debug)]
-struct Key {
-    key: String,
-    pos: u64,
-    len: u64,
+#[derive(Debug, Clone)]
+pub struct Key {
+    pub key: String,
+    pub pos: u64,
+    pub len: u64,
 }
 
 fn nl(s: Span) -> IResult<Span, Span> {
@@ -41,7 +41,7 @@ fn log_no_contents(s: Span) -> IResult<Span, Key> {
     let (s, pos_after) = position(s)?;
 
     let pos: u64 = pos.location_offset().try_into().unwrap();
-    let len: u64 = (pos_after.location_offset() as u64 - pos - 6)
+    let len: u64 = (pos_after.location_offset() as u64 - pos - 5)
         .try_into()
         .unwrap();
 
@@ -69,16 +69,12 @@ fn file_no_contents(s: Span) -> Option<Vec<Key>> {
     None
 }
 
-pub fn parse_log(file_name: &str) -> HashMap<String, (u64, u64)> {
-    let mut result = HashMap::new();
-
+pub fn parse_log(file_name: &str) -> Vec<Key> {
     if let Ok(content) = fs::read_to_string(file_name) {
         if let Some(keys) = file_no_contents(Span::new(content.as_bytes())) {
-            for key in keys.iter() {
-                result.insert(key.key.clone(), (key.pos, key.len));
-            }
+            return keys;
         }
     }
 
-    result
+    vec![]
 }
