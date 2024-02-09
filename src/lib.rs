@@ -96,7 +96,7 @@ impl Storage {
 
     fn retrieve_by_pos_and_len(&mut self, pos: u64, len: u64) -> Option<Vec<u8>> {
         let l = len as usize;
-        if let Ok(_) = self.buf_reader.seek(SeekFrom::Start(pos)) {
+        if self.buf_reader.seek(SeekFrom::Start(pos)).is_ok() {
             let content = (&mut self.buf_reader)
                 .bytes()
                 .take(l)

@@ -1,13 +1,11 @@
+use clap::{arg, Parser, Subcommand};
 use std::io::{Read, Write};
 
-use clap::{arg, Parser, Subcommand};
-use fs_objstore;
-
+// TODO streaming so not entire file needs to be read
 // TODO getNext by key - (lazy) iterator (streams)
 // TODO write readme
 // TODO add tests
 // TODO benchmark
-// TODO streaming so not entire file needs to be read
 // TODO refactor the code a bit
 // TODO release? / use in other project
 // TODO write defragmentation / cleaning
@@ -17,6 +15,8 @@ use fs_objstore;
 // TODO build coordinator / load balancer on top
 // TODO build a simple msg queue
 // TODO build a blog
+// TODO Perf https://nnethercote.github.io/perf-book
+// TODO consider different allocator?
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -59,13 +59,13 @@ fn main() -> Result<(), std::io::Error> {
                     content: Some(c),
                     key,
                 } => {
-                    let key = storage.persist(key, &c.as_bytes())?;
+                    let key = storage.persist(key, c.as_bytes())?;
                     std::io::stdout().write_fmt(format_args!("{key}"))?;
                 }
                 Commands::Persist { content: None, key } => {
                     let mut content = String::new();
                     std::io::stdin().read_to_string(&mut content)?;
-                    let key = storage.persist(key, &content.as_bytes())?;
+                    let key = storage.persist(key, content.as_bytes())?;
                     std::io::stdout().write_fmt(format_args!("{key}"))?;
                 }
                 Commands::Retrieve { key } => {
