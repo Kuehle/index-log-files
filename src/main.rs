@@ -1,6 +1,8 @@
 use clap::{arg, Parser, Subcommand};
 use std::io::{Read, Write};
 
+// TODO LSM tree - multiple levels
+//      memory -> hd?
 // TODO streaming so not entire file needs to be read
 // TODO getNext by key - (lazy) iterator (streams)
 // TODO write readme
@@ -9,6 +11,8 @@ use std::io::{Read, Write};
 // TODO refactor the code a bit
 // TODO release? / use in other project
 // TODO write defragmentation / cleaning
+// TODO add retention / TTL
+// TODO allow to get by index even after cleaning up old entries
 // TODO delete entry (overwrite key & overwrite content with 0x90)
 // TODO use different parsing mode for cli with faster upstart time
 // TODO build server version
