@@ -3,6 +3,7 @@ use std::io::{Read, Write};
 
 // TODO LSM tree - multiple levels
 //      memory -> hd?
+//      External Memory Algorithms and Data Structures
 // TODO streaming so not entire file needs to be read
 // TODO getNext by key - (lazy) iterator (streams)
 // TODO write readme
