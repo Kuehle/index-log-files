@@ -54,8 +54,6 @@ enum Commands {
 fn main() -> Result<(), std::io::Error> {
     let args = Args::parse();
 
-    println!("{args:?}");
-
     match args.command {
         Some(cmd) => {
             let mut storage = fs_objstore::init(&args.file);
